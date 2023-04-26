@@ -1,68 +1,33 @@
-from conans import ConanFile, CMake, tools, errors
 import os, re
-from io import StringIO
+
+from conan import ConanFile
+from conan.tools.files import get, collect_libs
+from conan.tools.layout import basic_layout
+from conan.errors import ConanException
 
 
 required_conan_version = ">=1.59.0"
 
 
-def find_all_headers(root):
-    result = []
-    entries = os.walk(root)
-    for entry in entries:
-        for file in entry[2]:
-            if file.endswith('.h'):
-                result.append(os.path.join(entry[0], file))
-
-    return result
-
-def fix(all_headers, src):
-    f = open(src, "r")
-
-    base = os.path.dirname(src)
-
-    regex = r'^#include\s*"([^"]*)"'
-    result = ""
-
-    for line in f:
-        match = re.match(regex, line)
-        if match:
-            if not os.path.exists(os.path.join(base, match.group(1))):
-                matches = [x for x in all_headers if os.path.basename(x) == os.path.basename(match.group(1))]
-                if len(matches) == 1:
-                    relpath = os.path.relpath(matches[0], base)
-                    result += '#include "%s"\n' % relpath
-                    continue
-        result += line
-
-    f.close()
-
-    f = open(src, "w")
-    f.write(result)
-
-def merge_two_dicts(x, y):
-    z = x.copy()   # start with x's keys and values
-    z.update(y)    # modifies z with y's keys and values & returns None
-    return z
-
-
 class SkiaConan(ConanFile):
-    name = "skia"
-    version = "master"
-    license = "<Put the package license here>"
-    author = "Marcus Tillmanns <maddimax@gmail.com>"
-    url = "https://github.com/Maddimax/conan-skia.git"
+    name = "Skia"
+    license = "BSD 3-Clause"
+    url = "https://github.com/conan-io/conan-center-index"
+    homepage = "https://skia.org"
+    topics = ("skia", "graphics", "rendering", "vector", "2d", "3d")
     description = "A 2D/3D Vector rendering engine"
-    topics = ("render", "vector", "2d", "3d")
     settings = "os", "compiler", "build_type", "arch"
 
-    skia_options = {
+    options = {
+        "is_official_build" : [True, False],
+        "is_component_build": [True, False],
         "skia_enable_atlas_text" : [True, False],
         "skia_enable_ccpr" : [True, False],
         "skia_enable_discrete_gpu" : [True, False],
         "skia_enable_flutter_defines" : [True, False],
         "skia_enable_fontmgr_android" : [True, False],
-        "skia_enable_fontmgr_custom" : [True, False],
+        "skia_enable_fontmgr_custom_directory" : [True, False],
+        "skia_enable_fontmgr_custom_embedded" : [True, False],
         "skia_enable_fontmgr_custom_empty" : [True, False],
         "skia_enable_fontmgr_empty" : [True, False],
         "skia_enable_fontmgr_fuchsia" : [True, False],
@@ -79,6 +44,7 @@ class SkiaConan(ConanFile):
         "skia_enable_spirv_validation" : [True, False],
         "skia_enable_tools" : [True, False],
         "skia_enable_vulkan_debug_layers" : [True, False],
+        "skia_fontmgr_factory": [None, "ANY"],
         "skia_generate_workarounds" : [True, False],
         "skia_use_angle" : [True, False],
         "skia_use_dng_sdk" : [True, False],
@@ -91,9 +57,15 @@ class SkiaConan(ConanFile):
         "skia_use_harfbuzz" : [True, False],
         "skia_use_icu" : [True, False],
         "skia_use_libheif" : [True, False],
-        "skia_use_libjpeg_turbo" : [True, False],
-        "skia_use_libpng" : [True, False],
-        "skia_use_libwebp" : [True, False],
+        "skia_use_libjpeg_turbo_encode" : [True, False],
+        "skia_use_libjpeg_turbo_decode" : [True, False],
+        "skia_use_no_jpeg_encode" : [True, False],
+        "skia_use_libpng_encode" : [True, False],
+        "skia_use_libpng_decode" : [True, False],
+        "skia_use_no_png_encode" : [True, False],
+        "skia_use_libwebp_encode" : [True, False],
+        "skia_use_libwebp_decode" : [True, False],
+        "skia_use_no_webp_encode" : [True, False],
         "skia_use_lua" : [True, False],
         "skia_use_metal" : [True, False],
         "skia_use_opencl" : [True, False],
@@ -111,21 +83,19 @@ class SkiaConan(ConanFile):
         "skia_use_x11" : [True, False],
         "skia_use_xps" : [True, False],
         "skia_use_zlib" : [True, False],
-        "is_official_build" : [True, False]
     }
 
-    options = merge_two_dicts({ "shared": [True, False] }, skia_options)
-
     default_options = {
-        "shared":False,
-        "harfbuzz:with_icu" : True,
+        "is_official_build" : True,
+        "is_component_build":False,
         # Skia options
         "skia_enable_atlas_text" : False,
         "skia_enable_ccpr" : True,
         "skia_enable_discrete_gpu" : True,
         "skia_enable_flutter_defines" : False,
         "skia_enable_fontmgr_android" : False,
-        "skia_enable_fontmgr_custom" : False,
+        "skia_enable_fontmgr_custom_directory" : False,
+        "skia_enable_fontmgr_custom_embedded" : False,
         "skia_enable_fontmgr_custom_empty" : False,
         "skia_enable_fontmgr_empty" : False,
         "skia_enable_fontmgr_fuchsia" : False,
@@ -142,21 +112,28 @@ class SkiaConan(ConanFile):
         "skia_enable_spirv_validation" : False,
         "skia_enable_tools" : False,
         "skia_enable_vulkan_debug_layers" : False,
+        "skia_fontmgr_factory": ":fontmgr_empty_factory",
         "skia_generate_workarounds" : False,
         "skia_use_angle" : False,
-        "skia_use_dng_sdk" : True,
+        "skia_use_dng_sdk" : False,
         "skia_use_egl" : False,
         "skia_use_expat" : True,
         "skia_use_fixed_gamma_text" : False,
         "skia_use_fontconfig" : False,
-        "skia_use_fonthost_mac" : True,
+        "skia_use_fonthost_mac" : False,
         "skia_use_freetype" : False,
         "skia_use_harfbuzz" : True,
         "skia_use_icu" : True,
         "skia_use_libheif" : False,
-        "skia_use_libjpeg_turbo" : True,
-        "skia_use_libpng" : True,
-        "skia_use_libwebp" : True,
+        "skia_use_libjpeg_turbo_encode" : True,
+        "skia_use_libjpeg_turbo_decode" : True,
+        "skia_use_no_jpeg_encode" : False,
+        "skia_use_libpng_encode" : True,
+        "skia_use_libpng_decode" : True,
+        "skia_use_no_png_encode" : False,
+        "skia_use_libwebp_encode" : True,
+        "skia_use_libwebp_decode" : True,
+        "skia_use_no_webp_encode" : False,
         "skia_use_lua" : False,
         "skia_use_metal" : False,
         "skia_use_opencl" : False,
@@ -173,70 +150,19 @@ class SkiaConan(ConanFile):
         "skia_use_wuffs" : False,
         "skia_use_x11" : False,
         "skia_use_xps" : True,
-        "skia_use_zlib" : True,
-        "is_official_build" : True
+        "skia_use_zlib" : True
     }
 
     generators = "cmake"
-    build_policy = "missing"
+    no_copy_source = True
 
-    scm = {
-        "type": "git",
-        "url": "auto",
-        "revision": "auto",
-        "submodule" : "shallow"
-    }
+    @property
+    def _settings_build(self):
+        return getattr(self, "settings_build", self.settings)
 
-    revision_mode = "scm"
-
-    def get_skia_option_value(self, option_name):
-        buf = StringIO()
-        self.run('bin/gn args out/conan-build --list=%s --short' % (option_name), output=buf, cwd='skia')
-        output = buf.getvalue()
-
-        pattern = r'%s = (.*)' % (option_name)
-        match = re.match(pattern, output)
-        if match:
-            if match.group(1) == 'true':
-                return True
-            elif match.group(1) == 'false':
-                return False
-
-        raise errors.ConanInvalidConfiguration("Could not parse gn comfiguration options")
-
-    def requirements(self):
-        if self.options.skia_use_system_icu and self.options.skia_use_icu:
-            self.requires("icu/63.1@bincrafters/stable")
-        if self.options.skia_use_system_libjpeg_turbo and self.options.skia_use_libjpeg_turbo:
-            self.requires("libjpeg-turbo/1.5.2@bincrafters/stable")
-        if self.options.skia_use_system_harfbuzz and self.options.skia_use_harfbuzz:
-            self.requires("harfbuzz/2.4.0@maddimax/stable")
-        if self.options.skia_use_system_libpng and self.options.skia_use_libpng:
-            self.requires("libpng/1.6.36@bincrafters/stable")
-
-    def source(self):
-        # Fix include paths ...
-        self.output.info("Fixing headers:")
-        all_headers = find_all_headers(os.path.join(self.source_folder, "skia"))
-        for header in all_headers:
-            fix(all_headers, header)
-
-        if len(all_headers) == 0:
-            print("Error: No header files found")
-            exit(1)
-
-        self.output.info("Fixed %i files" % (len(all_headers)))
-
-        # Fetch dependencies
-        self.run('/usr/local/bin/python skia/tools/git-sync-deps')
-
-    def configure(self):
-        if self.options.skia_use_metal:
-            if not self.settings.os == "iOS" and not self.settings.os == "Macos":
-                raise errors.ConanInvalidConfiguration("Metal is only supported on darwin platforms: %s" % self.settings.os)
-        if self.settings.os == "iOS":
-            self.options.skia_use_fonthost_mac = False
-            self.options.skia_use_system_expat = False
+    def config_options(self):
+        if self.settings.os == "Windows" or self.settings.os != self._settings_build.os:
+            # No system libraries on Windows
             self.options.skia_use_system_expat = False
             self.options.skia_use_system_harfbuzz = False
             self.options.skia_use_system_icu = False
@@ -245,72 +171,91 @@ class SkiaConan(ConanFile):
             self.options.skia_use_system_libwebp = False
             self.options.skia_use_system_zlib = False
 
+    def configure(self):
+        pass
+
+    def layout(self):
+        basic_layout(self, src_folder="src")
+
+    def requirements(self):
+        pass
+
+    def build_requirements(self):
+        self.tool_requires("ninja/1.11.1@")
+
+        if self.settings.os == "Android":
+            self.tool_requires("android-ndk/r25c@")
+
+    def validate(self):
+        pass
+
+    def source(self):
+        get(self, **self.conan_data["sources"][self.version], destination=self.source_folder, strip_root=True)
+
+        # Fetch dependencies
+        self.run('python3 tools/git-sync-deps')
+
+    def generate(self):
+        pass
+
     def build(self):
-        flags = []
-        for k,v in self.deps_cpp_info.dependencies:
-            self.output.info("Adding dependency: %s - %s" %(k, v.rootpath))
-            flags += ['\\"-I%s/include\\"' % (v.rootpath), '\\"-I%s/include/%s\\"' % (v.rootpath, k)]
 
-        flag_str = 'extra_cflags_cc=[%s]' % ",".join(flags)
+        args = []
+        extra_cflags = []
 
-        opts = [flag_str]
-
-        for k,v in self.options.items():
-            if k in self.skia_options:
-                opts += [("%s=%s" % (k,v)).lower()]
+        for k, v in self.options.items():
+            if k == "skia_fontmgr_factory":
+                if v != "None":
+                    args.append("%s=\\\"%s\\\"" % (k, v))
+            else:
+                args.append(("%s=%s" % (k, v)).lower())
 
         if self.settings.build_type == "Debug":
-            opts += ["is_debug=true"]
-        else:
-            opts += ["is_debug=false"]
+            args.append("is_debug=true")
 
-        if self.settings.os == "iOS":
-            opts += ['target_os=\\"ios\\"']
-            if self.settings.arch == "armv8":
-                opts += ['target_cpu=\\"arm64\\"']
+        if self.settings.os == "Windows":
+            if str(self._settings_build.compiler.runtime).startswith("MD"):
+                if self._settings_build.build_type == "Debug":
+                    extra_cflags.append("/MDd")
+                else:
+                    extra_cflags.append("/MD")
             else:
-                opts += ['target_cpu=\\"x86_64\\"']
+                if self._settings_build.build_type == "Debug":
+                    extra_cflags.append("/MTd")
+                else:
+                    extra_cflags.append("/MT")
+        elif self.settings.os == "Android":
+            args.extend([
+                "ndk=%s" % "\\\"%s\\\"" % self.env["ANDROID_NDK_HOME"],
+                "ndk_api=%s" % self.settings.os.api_level,
+            ])
 
-        if len(opts) > 0:
-            opts = '"--args=%s"' % " ".join(opts)
-        else:
-            opts = ""
+        if str(self.settings.arch).startswith("arm"):
+            if (self.settings.arch == "armv8"):
+                args.append("target_cpu=\\\"arm64\\\"")
+            elif (self.settings.arch == "armv8_32"):
+                args.append("target_cpu=\\\"arm\\\"")
+            else:
+                raise ConanException("Unsupported ARM architecture: %s" % self.settings.arch)
 
-        self.output.info("gn options: %s" % (opts))
+        if extra_cflags:
+            args.append("extra_cflags=[\\\"%s\\\"]" % "\\\",\\\"".join(extra_cflags))
 
-        self.run('bin/gn gen out/conan-build %s ' %(opts), cwd="skia")
-        failed = False
-        for k,v in self.options.items():
-            if k in self.skia_options:
-                actual = self.get_skia_option_value(k)
-                if not ("%s" % actual) == ("%s" % v):
-                    failed = True
-                    self.output.warn("Mismatch in %s: %s => %s" % ( k, v, actual ))
-        if failed:
-            raise errors.ConanInvalidConfiguration("Final gn configuration did not match requested config")
+        cmd = "bin%sgn gen %s --args=\"%s\"" % (os.sep, self.build_folder, " ".join(args))
 
-        self.run('ninja -C out/conan-build', cwd="skia")
+        self.run(cmd, cwd=self.source_folder)
+        self.run('ninja')
 
     def package(self):
-        self.copy("*.h", dst="include/skia", src="skia", keep_path=True)
-        self.copy("*.dll", dst="bin", src="skia/out/conan-build",keep_path=False)
-        self.copy("*.so", dst="lib", src="skia/out/conan-build",keep_path=False)
-        self.copy("*.dylib", dst="lib", src="skia/out/conan-build",keep_path=False)
-        self.copy("*.a", dst="lib", src="skia/out/conan-build", keep_path=False)
-
-    #        if self.settings.build_type == "Release":
-    #            libs = os.listdir(os.path.join(self.package_folder, "lib"))
-    #            self.output.info("Trying to strip: %s" %(libs))
-    #            for lib in libs:
-    #                self.run('strip -S %s' % (os.path.join(self.package_folder, "lib" ,lib)))
+        # copy headers
+        self.copy("*.h", dst="include/skia", src=self.source_folder, keep_path=True)
+        # copy binaries
+        self.copy("*.dll", dst="bin", src=self.build_folder, keep_path=False)
+        self.copy("*.lib", dst="lib", src=self.build_folder, keep_path=False)
+        self.copy("*.so", dst="lib", src=self.build_folder, keep_path=False)
+        self.copy("*.dylib", dst="lib", src=self.build_folder, keep_path=False)
+        self.copy("*.a", dst="lib", src=self.build_folder, keep_path=False)
 
     def package_info(self):
-        libs = os.listdir(os.path.join(self.package_folder, "lib"))
-        libs = [(x[3:])[:-2] for x in libs]
-
-        self.cpp_info.libs = libs
-        if self.settings.os == "Macos":
-            self.cpp_info.exelinkflags += ["-framework AppKit"]
-        if self.options.skia_use_metal:
-            self.cpp_info.defines += ["SK_METAL=1"]
-            self.cpp_info.exelinkflags += ["-framework Metal", "-framework MetalKit"]
+        self.cpp_info.libs = collect_libs(self)
+        self.cpp_info.includedirs = ["include", "include/skia"]
