@@ -30,6 +30,7 @@ class CPythonConan(ConanFile):
         "with_sqlite3": [True, False],
         "with_tkinter": [True, False],
         "with_curses": [True, False],
+        "with_ssl": [True, False],
 
         # Python 2 options
         "unicode": ["ucs2", "ucs4"],
@@ -53,6 +54,7 @@ class CPythonConan(ConanFile):
         "with_sqlite3": True,
         "with_tkinter": True,
         "with_curses": True,
+        "with_ssl": True,
 
         # Python 2 options
         "unicode": "ucs2",
