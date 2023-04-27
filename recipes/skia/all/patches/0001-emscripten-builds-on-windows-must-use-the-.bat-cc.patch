@@ -1,0 +1,23 @@
+diff --git a/gn/toolchain/BUILD.gn b/gn/toolchain/BUILD.gn
+index ba85c3d54e..7fd446f5d3 100644
+--- a/gn/toolchain/BUILD.gn
++++ b/gn/toolchain/BUILD.gn
+@@ -432,9 +432,15 @@ if (is_wasm) {
+   gcc_like_toolchain("wasm") {
+     cpu = "wasm"
+     os = "wasm"
+-    ar = "$skia_emsdk_dir/upstream/emscripten/emar"
+-    cc = "$skia_emsdk_dir/upstream/emscripten/emcc"
+-    cxx = "$skia_emsdk_dir/upstream/emscripten/em++"
++    if(host_os == "win"){
++      ar = "$skia_emsdk_dir/upstream/emscripten/emar.bat"
++      cc = "$skia_emsdk_dir/upstream/emscripten/emcc.bat"
++      cxx = "$skia_emsdk_dir/upstream/emscripten/em++.bat"
++    }else{
++      ar = "$skia_emsdk_dir/upstream/emscripten/emar"
++      cc = "$skia_emsdk_dir/upstream/emscripten/emcc"
++      cxx = "$skia_emsdk_dir/upstream/emscripten/em++"
++    }
+     link = cxx
+   }
+ }

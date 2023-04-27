@@ -1,5 +1,13 @@
 sources:
   # Using github as google git archives are different at each download
+  "canvaskit.0.38.0":
+    url: "https://github.com/google/skia/archive/refs/tags/canvaskit/0.38.0.zip"
+    sha256: "7ba80739bc61830396e464705421f1bf15a795bbdf42a5433b73e581940f16d3"
   "chrome.m114":
     url: "https://github.com/google/skia/archive/refs/heads/chrome/m114.zip"
     sha256: "212ab38fa7ac12aa0a0aa591e9ba07f7784aa1398a5ece8ccceb80d830479ae3"
+patches:
+  "canvaskit.0.38.0":
+    - patch_file: "patches/0001-emscripten-builds-on-windows-must-use-the-.bat-cc.patch"
+      patch_description: "Add .bat extension to emscripten scripts on windows"
+      patch_type: "conan"
