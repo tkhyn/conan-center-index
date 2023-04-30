@@ -10,3 +10,6 @@ class TestPackageConan(ConanFile):
         if not tools.cross_building(self):
             self.output.info("Node version:")
             self.run("node --version", run_environment=True)
+
+            self.output.info("Npm version:")
+            self.run("npm --version", run_environment=True)
