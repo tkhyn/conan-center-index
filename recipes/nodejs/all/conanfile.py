@@ -1,8 +1,12 @@
 import os
-from conans import ConanFile, tools
-from conans.errors import ConanInvalidConfiguration
+from shutil import copytree
 
-required_conan_version = ">=1.33.0"
+from conan import ConanFile
+from conan.tools.files import get
+from conan.tools.layout import basic_layout
+from conan.errors import ConanInvalidConfiguration
+
+required_conan_version = ">=1.59.0"
 
 
 class NodejsConan(ConanFile):
@@ -16,10 +20,6 @@ class NodejsConan(ConanFile):
     no_copy_source = True
 
     @property
-    def _source_subfolder(self):
-        return os.path.join(self.source_folder, "source_subfolder")
-
-    @property
     def _nodejs_arch(self):
         if str(self.settings.os) == "Linux":
             if str(self.settings.arch).startswith("armv7"):
@@ -28,6 +28,9 @@ class NodejsConan(ConanFile):
                 return "armv8"
         return str(self.settings.arch)
 
+    def layout(self):
+        basic_layout(self)
+
     def validate(self):
         if (not (self.version in self.conan_data["sources"]) or
             not (str(self.settings.os) in self.conan_data["sources"][self.version]) or
@@ -35,14 +38,24 @@ class NodejsConan(ConanFile):
             raise ConanInvalidConfiguration("Binaries for this combination of architecture/version/os not available")
 
     def build(self):
-        tools.get(**self.conan_data["sources"][self.version][str(self.settings.os)][self._nodejs_arch], destination=self._source_subfolder, strip_root=True)
+        get(self, **self.conan_data["sources"][self.version][str(self.settings.os)][self._nodejs_arch], strip_root=True)
 
     def package(self):
-        self.copy(pattern="LICENSE", dst="licenses", src=self._source_subfolder)
-        self.copy(pattern="*", src=os.path.join(self._source_subfolder, "bin"), dst="bin")
-        self.copy(pattern="node.exe", src=self._source_subfolder, dst="bin")
-        self.copy(pattern="npm.cmd", src=self._source_subfolder, dst="bin")
-        self.copy(pattern="npx.cmd", src=self._source_subfolder, dst="bin")
+        self.copy(pattern="LICENSE", dst="licenses")
+
+        # Linux
+        self.copy(pattern="*", src="bin", dst="bin")
+
+        # Windows
+        self.copy(pattern="node.exe", dst="bin")
+        self.copy(pattern="np*.cmd", dst="bin")
+
+        # node_modules folder
+        copytree(
+            os.path.join(self.build_folder, "node_modules"),
+            os.path.join(self.package_folder, "bin", "node_modules"),
+            dirs_exist_ok=True
+        )
 
     def package_info(self):
         self.cpp_info.includedirs = []
