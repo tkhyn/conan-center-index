@@ -43,19 +43,27 @@ class NodejsConan(ConanFile):
     def package(self):
         self.copy(pattern="LICENSE", dst="licenses")
 
-        # Linux
-        self.copy(pattern="*", src="bin", dst="bin")
+        if self.settings.os == "Windows":
+            # Windows
+            self.copy(pattern="node.exe", dst="bin")
+            self.copy(pattern="np*.cmd", dst="bin")
 
-        # Windows
-        self.copy(pattern="node.exe", dst="bin")
-        self.copy(pattern="np*.cmd", dst="bin")
+            # node_modules folder is required for npm and npx
+            copytree(
+                os.path.join(self.build_folder, "node_modules"),
+                os.path.join(self.package_folder, "bin", "node_modules"),
+                dirs_exist_ok=True
+            )
+        else:
+            # Linux. Copies node, npm, npx but not corepack
+            self.copy(pattern="n*", src="bin", dst="bin", symlinks=True)
 
-        # node_modules folder
-        copytree(
-            os.path.join(self.build_folder, "node_modules"),
-            os.path.join(self.package_folder, "bin", "node_modules"),
-            dirs_exist_ok=True
-        )
+            # node_modules folder is required for npm and npx which have symlinks to it
+            copytree(
+                os.path.join(self.build_folder, "lib"),
+                os.path.join(self.package_folder, "lib"),
+                symlinks=True, dirs_exist_ok=True
+            )
 
     def package_info(self):
         self.cpp_info.includedirs = []
