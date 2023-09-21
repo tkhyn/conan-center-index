@@ -84,9 +84,6 @@ class Hdf5Conan(ConanFile):
             self.requires("openmpi/4.1.0")
 
     def validate(self):
-        if not can_run(self):
-            # While building it runs some executables like H5detect
-            raise ConanInvalidConfiguration("Current recipe doesn't support cross-building (yet)")
         if self.options.parallel and not self.options.enable_unsupported:
             if self.options.enable_cxx:
                 raise ConanInvalidConfiguration("Parallel and C++ options are mutually exclusive, forcefully allow with enable_unsupported=True")
@@ -165,6 +162,9 @@ class Hdf5Conan(ConanFile):
         tc.generate()
 
     def build(self):
+        if not can_run(self):
+            # While building it runs some executables like H5detect
+            raise ConanInvalidConfiguration("Current recipe doesn't support cross-building (yet)")
         apply_conandata_patches(self)
         # Do not force PIC
         replace_in_file(self, os.path.join(self.source_folder, "CMakeLists.txt"),
