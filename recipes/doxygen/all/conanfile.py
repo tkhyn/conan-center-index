@@ -1,10 +1,11 @@
-from conan import ConanFile
+from conan import ConanFile, conan_version
 from conan.errors import ConanInvalidConfiguration
 from conan.tools.cmake import CMake, CMakeDeps, CMakeToolchain, cmake_layout
 from conan.tools.files import apply_conandata_patches, copy, export_conandata_patches, get
 from conan.tools.microsoft import check_min_vs, is_msvc_static_runtime
 from conan.tools.scm import Version
 import os
+import subprocess
 
 required_conan_version = ">=1.52.0"
 
@@ -27,6 +28,9 @@ class DoxygenConan(ConanFile):
         "enable_parse": True,
         "enable_search": True,
         "enable_app": False,
+    }
+    default_build_options = {
+        "cpython/*:shared": True
     }
 
     @property
@@ -70,6 +74,14 @@ class DoxygenConan(ConanFile):
             check_min_vs(self, "191")
 
     def build_requirements(self):
+        # shutil.which does not work on Windows because of the default app execution aliases
+        # it is therefore necessary to check if actual python is installed
+        try:
+            subprocess.check_output(["python", "--version"], stderr=subprocess.STDOUT)
+        except subprocess.CalledProcessError:
+            # No system python could be found, require it
+            self.tool_requires("cpython/3.10.0")
+
         if self._settings_build.os == "Windows":
             self.tool_requires("winflexbison/2.5.24")
         else:
@@ -103,11 +115,18 @@ class DoxygenConan(ConanFile):
         cmake.install()
 
     def package_info(self):
+        bindir = os.path.join(self.package_folder, "bin")
+
         self.cpp_info.set_property("cmake_find_mode", "none")
+        self.cpp_info.bindirs = [bindir]
         self.cpp_info.libdirs = []
         self.cpp_info.includedirs = []
         if self.settings.os in ["Linux", "FreeBSD"]:
             self.cpp_info.system_libs = ["pthread", "m"]
 
-        # TODO: to remove in conan v2
-        self.env_info.PATH.append(os.path.join(self.package_folder, "bin"))
+        self.runenv_info.append_path("PATH", bindir)
+        self.buildenv_info.append_path("PATH", bindir)
+
+        # TODO remove once Conan 1.x is no longer supported
+        if Version(conan_version).major < 2:
+            self.env_info.PATH.append(bindir)
