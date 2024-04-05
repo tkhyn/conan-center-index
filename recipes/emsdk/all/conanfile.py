@@ -104,9 +104,8 @@ class EmSDKConan(ConanFile):
             # Install required tools
             required_tools = self._tools_for_version()
             for key, value in required_tools.items():
-                if key != 'nodejs':
-                    self.run(f"{emsdk} install {value}")
-                    self.run(f"{emsdk} activate {value}")
+                self.run(f"{emsdk} install {value}")
+                self.run(f"{emsdk} activate {value}")
 
     def package(self):
         copy(self, "LICENSE", src=self.source_folder, dst=os.path.join(self.package_folder, "licenses"))
