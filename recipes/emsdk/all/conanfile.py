@@ -90,9 +90,11 @@ class EmSDKConan(ConanFile):
             data = json.load(f)
             tools = data["tools"]
             if self.settings.os == "Windows":
-                python = next((it for it in tools if (it["id"] == "python" and not it.get("is_old", False))), None)
+                # assumes that python versions are sorted in ascending order
+                python = next((it for it in reversed(tools) if (it["id"] == "python" and not it.get("is_old", False))), None)
                 ret["python"] = f"python-{python['version']}-64bit"
-            node = next((it for it in tools if (it["id"] == "node" and not it.get("is_old", False))), None)
+            # assumes that nodejs versions are sorted in ascending order
+            node = next((it for it in reversed(tools) if (it["id"] == "node" and not it.get("is_old", False))), None)
             ret["nodejs"] = f"node-{node['version']}-64bit"
         return ret
 
