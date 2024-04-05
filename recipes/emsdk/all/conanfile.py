@@ -43,27 +43,27 @@ class EmSDKConan(ConanFile):
 
     @property
     def _relative_paths(self):
-        return ["bin", os.path.join("bin", "upstream", "emscripten")]
+        return ["", os.path.join("upstream", "emscripten")]
 
     @property
     def _paths(self):
-        return [os.path.join(self.package_folder, path) for path in self._relative_paths]
+        return [os.path.join(self._emsdk, path) for path in self._relative_paths]
 
     @property
     def _emsdk(self):
-        return os.path.join(self.package_folder, "bin")
+        return os.path.join(self.package_folder, "bin") if self.package_folder else self.source_folder
 
     @property
     def _emscripten(self):
-        return os.path.join(self.package_folder, "bin", "upstream", "emscripten")
+        return os.path.join(self._emsdk, "upstream", "emscripten")
 
     @property
     def _em_config(self):
-        return os.path.join(self.package_folder, "bin", ".emscripten")
+        return os.path.join(self._emsdk, ".emscripten")
 
     @property
     def _em_cache(self):
-        return os.path.join(self.package_folder, "bin", ".emscripten_cache")
+        return os.path.join(self._emsdk, ".emscripten_cache")
 
     def generate(self):
         env = Environment()
@@ -136,7 +136,7 @@ class EmSDKConan(ConanFile):
         return path
 
     def package_info(self):
-        self.cpp_info.bindirs = self._relative_paths
+        self.cpp_info.bindirs = self._paths
         self.cpp_info.includedirs = []
         self.cpp_info.libdirs = []
         self.cpp_info.resdirs = []
