@@ -1,0 +1,20 @@
+sources:
+  "9.15.4":
+    Windows:
+      "x86_64":
+        url: "https://github.com/pnpm/pnpm/releases/download/v9.15.4/pnpm-win-x64.exe"
+        sha256: "b8f1508025fdc9f4d57c18b0fcaee520cf5fddbd12663ba12a2a07f1410b73df"
+    Linux:
+      "x86_64":
+        url: "https://github.com/pnpm/pnpm/releases/download/v9.15.4/pnpm-linux-x64"
+        sha256: "2089504c90939a21d9add2a9c96fd3112d8fcc9e71306b4333f89a14ca678fd2"
+      "armv8":
+        url: "https://github.com/pnpm/pnpm/releases/download/v9.15.4/pnpm-linux-arm64"
+        sha256: "da82f90c925e34c71c9b638c6b1c4046c3aec6f4f26c4701a1f71d9694417cb2"
+    Macos:
+      "x86_64":
+        url: "https://github.com/pnpm/pnpm/releases/download/v9.15.4/pnpm-macos-x64"
+        sha256: "2b564c910305df4e075d8cc8dc8815dbee036685a7b116c509ad5e054c5d2401"
+      "armv8":
+        url: "https://github.com/pnpm/pnpm/releases/download/v9.15.4/pnpm-macos-arm64"
+        sha256: "e748ba824790fcd128e27680e8f0238b28c1e6fc274c00095b9b8ae3a76495dd"
